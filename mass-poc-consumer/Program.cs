@@ -6,41 +6,44 @@ using MassTransit;
 using Azure.Messaging.ServiceBus.Administration;
 
 
-var multiTenant = false;
-
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
     {
         services.AddMassTransit(x =>
+        {
+            x.AddConsumer<SubmitApplicationConsumer>();
+
+            
+            x.UsingAzureServiceBus((context, cfg) =>
             {
-                x.AddConsumer<SubmitApplicationConsumer>();
+                cfg.Host(hostContext.Configuration.GetValue<string>("ServicebusConnection"));
 
-                // elided ...
-                x.UsingAzureServiceBus((context, cfg) =>
-                {
-                    cfg.Host(hostContext.Configuration.GetValue<string>("ServicebusConnection"));
+                var instanceTenant = hostContext.Configuration.GetValue<string>("instance_tenant");
 
-                    cfg.ReceiveEndpoint($"{typeof(SubmitApplication).Name}{ (!multiTenant ? "_ohbprgfh" : string.Empty)}_queue", e => {
+                cfg.ReceiveEndpoint($"{typeof(SubmitApplication).Name}{(!string.IsNullOrWhiteSpace(instanceTenant) ? "-" + instanceTenant : string.Empty )}-queue", e => {
 
-                        e.Subscribe<SubmitApplication>($"{typeof(SubmitApplication).Name}{ (!multiTenant ? "_ohbprgfh" : string.Empty)}",cfg => {
+                    e.Subscribe<SubmitApplication>($"{typeof(SubmitApplication).Name}{ (!string.IsNullOrWhiteSpace(instanceTenant) ? "-" + instanceTenant : string.Empty)}", cfg => {
+                        {
+                            if (!string.IsNullOrWhiteSpace(instanceTenant))
                             {
                                 var filter = new CorrelationRuleFilter();
-                                filter.ApplicationProperties.Add("tenant", "ohbprgfh");
-                                cfg.Rule = new CreateRuleOptions("tenant_routing_rule", filter);
-                             }
-                        });
-                        e.ConfigureConsumer<SubmitApplicationConsumer>(context);
-
+                                filter.ApplicationProperties.Add("tenant", instanceTenant);
+                                cfg.Rule = new CreateRuleOptions("tenant-routing-rule", filter);
+                            }
+                        }
                     });
+                    e.ConfigureConsumer<SubmitApplicationConsumer>(context);
 
-
-                
-                    cfg.ConfigureEndpoints(context);
-                
                 });
+
+                cfg.ConfigureEndpoints(context);
+
             });
+        });
 
     })
     .Build();
 
 host.Run();
+
+

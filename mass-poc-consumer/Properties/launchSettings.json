@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "WSL2",
+      "environmentVariables": {
+        "instance-tenat": "ojnqoaam"
+      },
+      "distributionName": ""
+    },
+    "tenant specific": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "instance_tenant": "ojnqoaam"
+      }
+    },
+    "multitenant": {
+      "commandName": "Project"
+    }
+  }
+}
