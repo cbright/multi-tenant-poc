@@ -3,7 +3,7 @@ public class SubmitApplication
 {
     public SubmitApplication()
     {
-     Tenant = string.Empty;
+        Tenant = string.Empty;
     }
 
     public string Tenant {get; set;} 

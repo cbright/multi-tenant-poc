@@ -42,7 +42,9 @@ public class Worker : BackgroundService
         foreach(var tenant in tenants)
         {
             var app = new SubmitApplication(){Tenant = tenant};
-            await _bus.Publish(app, stoppingToken);
+            await _bus.Publish(app, context => { 
+                context.Headers.Set("tenant", app.Tenant);
+            }, stoppingToken);
             _logger.LogInformation($"publishing application {app.Id} for {app.Tenant}");
         }
     }
