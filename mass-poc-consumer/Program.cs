@@ -6,8 +6,6 @@ using MassTransit;
 using Azure.Messaging.ServiceBus.Administration;
 
 
-var multiTenant = false;
-
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
     {
@@ -15,27 +13,41 @@ IHost host = Host.CreateDefaultBuilder(args)
             {
                 x.AddConsumer<SubmitApplicationConsumer>();
 
-                // elided ...
+                //x.SetKebabCaseEndpointNameFormatter();
+
                 x.UsingAzureServiceBus((context, cfg) =>
                 {
                     cfg.Host(hostContext.Configuration.GetValue<string>("ServicebusConnection"));
 
-                    cfg.ReceiveEndpoint($"{typeof(SubmitApplication).Name}{ (!multiTenant ? "_ohbprgfh" : string.Empty)}_queue", e => {
+                    var tenantSubscription = new List<string>();
+                    tenantSubscription = context.GetService<IConfiguration>().GetSection("DedicatedTenants").Get<string[]>().ToList();
 
-                        e.Subscribe<SubmitApplication>($"{typeof(SubmitApplication).Name}{ (!multiTenant ? "_ohbprgfh" : string.Empty)}",cfg => {
+                    if(!tenantSubscription.Any())
+                    {
+                        throw new Exception("No subscription defined. At a minimum \"multitenant\" must be passed as configuration for \"DedicatedTenants\" array section.");
+                    }
+
+                    foreach(var subscriptionIdentifier in tenantSubscription)
+                    {
+                        cfg.ReceiveEndpoint($"{typeof(SubmitApplication).Name}_{subscriptionIdentifier}_queue", e =>
+                        {
+
+                            e.Subscribe<SubmitApplication>($"{typeof(SubmitApplication).Name}_{subscriptionIdentifier}", sub =>
                             {
+                                //This must be mutually exclusive or duplicate messages will be delivered.
                                 var filter = new CorrelationRuleFilter();
-                                filter.ApplicationProperties.Add("tenant", "ohbprgfh");
-                                cfg.Rule = new CreateRuleOptions("tenant_routing_rule", filter);
-                             }
+                                filter.ApplicationProperties.Add("route-key", subscriptionIdentifier);
+                                sub.Rule = new CreateRuleOptions("tenant_routing_rule", filter);
+                                
+                            });
+
+                            e.ConfigureConsumeTopology = false;
+                            e.ConfigureConsumer<SubmitApplicationConsumer>(context);
+
                         });
-                        e.ConfigureConsumer<SubmitApplicationConsumer>(context);
+                    }
 
-                    });
-
-
-                
-                    cfg.ConfigureEndpoints(context);
+                   // cfg.ConfigureEndpoints(context);
                 
                 });
             });

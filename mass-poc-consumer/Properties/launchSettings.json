@@ -1,0 +1,25 @@
+{
+  "profiles": {
+    "dedicated-queue-multitenant-consumer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DedicatedTenants__0": "qnaagyep",
+        "DedicatedTenants__1": "fterttgd",
+        "DedicatedTenants__2": "ojnqoaam",
+        "DedicatedTenants__3": "ejafmupe"
+      }
+    },
+    "multitenant-consumer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DedicatedTenants__0": "multitenant"
+      }
+    },
+    "single-tenant-consumer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DedicatedTenants__0": "ejafmupe"
+      }
+    }
+  }
+}
